@@ -39,9 +39,16 @@ height of BS, UE velocity, UE demand,
 MDP-state(BS on/off), action(on/off), reward, transition probability matrix, \gamma(discount factor)
 Energy consumption(E_c) should be minimal & SIR should be upper than \beta(threshold) 
 (SIR > \beta in coverage)
+number of BS=n개
+E_c = Energy consumption function.=\SIGMA(E_cK)
+E_c1, .... E_cn = n번쨰 BS의 Energy consumption
 
-BS association rule
+r4
+
+BS association rule : 신호 센거 잡는 걸로 가정
 각 BS에서 받는 신호는 구분할 수 있나?
 BS는 각 UE에 대해 다른 출력으로 신호를 주고받나?
+
+transition 과정에서 disadvantage??
 
 
