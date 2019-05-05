@@ -1,6 +1,6 @@
-objective: minimalizing BS energy consumption
+##objective: minimalizing BS energy consumption
 
-*UDN 통신 모델 by RL*
+#UDN 통신 모델 by RL
 
 고려해야 할 사항
 UDN, MS(Mass Base Station), BS, UE,
