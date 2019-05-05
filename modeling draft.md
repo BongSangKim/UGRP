@@ -26,4 +26,4 @@ data rate -> SIR(or SINR, considering noise)
 -Interference 
   Los/NLoS
   Coverage area(distance up -> data rate down)
--nosie(\sigma ^2 )
+-noise(\sigma ^2 )
