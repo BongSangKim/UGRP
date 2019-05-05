@@ -17,7 +17,7 @@ BS가 p.c를 다르게 가지는 경우 or BS의 p.c가 uniform 한 경우
 초기분포 : PPP or uniform
 움직임 : random walk (non-uniform/direction)
 
-##### varaibles in UDN modeling
+#### varaibles in UDN modeling
 
 h(height)= suppose most BS(microBS especially) has average height of building in environment
 
