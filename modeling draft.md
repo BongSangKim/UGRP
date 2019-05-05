@@ -16,15 +16,32 @@ BS association rule, on/off machanism
 * about UE 
 
 초기분포 : PPP or uniform
-움직임 : random walk (non-uniform/direction)
+움직임 : random walk (non-uniform/direction), velocity-도플러 효과 고려해야할까?
+
+#### constant in UDN modeling
+3.5Ghz & 28GHz(bandwidth 800MHz)
+BS lambda(밀도)
 
 #### varaibles in UDN modeling
 
 h(height)= suppose most BS(microBS especially) has average height of building in environment
-
+r(distancd)
+bandwidth
 data rate -> SIR(or SINR, considering noise)
 *SIR
 -Interference 
   Los/NLoS
   Coverage area(distance up -> data rate down)
 -noise(\sigma ^2 )
+height of BS, UE velocity, UE demand, 
+
+##RL modeling
+MDP-state(BS on/off), action(on/off), reward, transition probability matrix, \gamma(discount factor)
+Energy consumption(E_c) should be minimal & SIR should be upper than \beta(threshold) 
+(SIR > \beta in coverage)
+
+BS association rule
+각 BS에서 받는 신호는 구분할 수 있나?
+BS는 각 UE에 대해 다른 출력으로 신호를 주고받나?
+
+
