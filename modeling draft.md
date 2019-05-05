@@ -8,9 +8,10 @@ UDN, MS(Mass Base Station), BS, UE,
 * about BS 
 
 분포: PPP
-Status: active or sleep(=off)
+Status: active(=on) or sleep(=off), active or stan
 power consumption : constant p.c(power consumption), transmission p.c(power consumption)
 BS가 p.c를 다르게 가지는 경우 or BS의 p.c가 uniform 한 경우
+BS association rule, on/off machanism
 
 * about UE 
 
