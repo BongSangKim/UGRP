@@ -1,4 +1,4 @@
-e""" RL design - MCTS
+""" RL design - MCTS
 State: 각 BS의 켜지고 꺼진 상태, BS n개면 특정 node에서 state도 n개. discrete state.
 action: 각 BS에 대해 켜고 끄는 것을 action으로, 켜면 1, 끄면 0. action은 policy에 의해 결정. discrete action
 policy를 최적화, 초기 policy는 랜덤. episode가 끝날때 reward에 따라 update. -->update 방식?
@@ -16,7 +16,7 @@ def MCTS(node=root node, threshold, terminal)
     for search tree:
         calculate the rewards
         if rewards < threshold:
-            end for
+            break
         elif:
             moves to next nodes
         if node arrives terminal:
