@@ -183,7 +183,7 @@ def BACKUP(node,reward):
 		node=node.parent
 	return
 
-if __name__=="__pesudo__":
+if __name__=="__pseudo__":
 	parser = argparse.ArgumentParser(description='MCTS research code')
 	parser.add_argument('--num_sims', action="store", required=True, type=int)
 	parser.add_argument('--levels', action="store", required=True, type=int, choices=range(State.NUM_TURNS))
