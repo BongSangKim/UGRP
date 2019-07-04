@@ -3,7 +3,8 @@
 #vale: state에 의해 value값을 결정, 에) BS_3:stqte_3이 1이고, UE와 BS_3의 거리를 D로 두면, value는 D에 대한 함수가 된다.
 #value는 S일단 SNR로 두었음. 따라서 value는 D^-alpha. alpha는 NLos로 가정하여 -4의 값
 #UE는 1~m명, BS는 1~n개, 거리 matrix D는 n by m matrix로 D_ij=norm(BS_i=UE_j)
-#D_ij는 
+#연산속도를 위해 D_ij=(BS_ix-UE_jx)**2+(BS_iy-UE_jy)**2
+#BS와 UE의 xy좌표는 ppp로 나중에 뿌림. 지금은 위치 정해져 있다고 생각
 
 """
 #MCTS 알고리즘 사용
