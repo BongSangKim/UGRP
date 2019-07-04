@@ -1,7 +1,7 @@
 ## objective: minimalizing BS energy consumption
 
-# UDN 통신 모델 by RL
-
+# Python Environment Design
+## RL 모델은 MCTS 고려
 #### 고려해야 할 사항 :
 UDN, MS(Mass Base Station), BS, UE,
 
