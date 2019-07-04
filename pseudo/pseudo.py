@@ -1,40 +1,55 @@
-#State: 각 BS의 켜지고 꺼진 상태, BS n개면 특정 node에서 state도 n개
-#action: 각 BS에 대해 켜고 끄는 것을 action으로, 켜면 1, 끄면 0. action은 policy에 의해 결정
-#vale: state에 의해 value값을 결정, 에) BS_3:stqte_3이 1이고, UE와 BS_3의 거리를 D로 두면, value는 D에 대한 함수가 된다.
-#value는 S일단 SNR로 두었음. 따라서 value는 D^-alpha. alpha는 NLos로 가정하여 -4의 값
-#UE는 1~m명, BS는 1~n개, 거리 matrix D는 n by m matrix로 D_ij=norm(BS_i=UE_j)
-#연산속도를 위해 D_ij=(BS_ix-UE_jx)**2+(BS_iy-UE_jy)**2
-#BS와 UE의 xy좌표는 ppp로 나중에 뿌림. 지금은 위치 정해져 있다고 생각
-
+""" RL design - MCTS
+State: 각 BS의 켜지고 꺼진 상태, BS n개면 특정 node에서 state도 n개. discrete state.
+action: 각 BS에 대해 켜고 끄는 것을 action으로, 켜면 1, 끄면 0. action은 policy에 의해 결정. discrete action
+policy를 최적화, 초기 policy는 랜덤. episode가 끝날때 reward에 따라 update. -->update 방식?
+value: state에 의해 value값을 결정, 에) BS_3:stqte_3이 1이고, UE와 BS_3의 거리를 D로 두면, value는 D에 대한 함수가 된다.
+value는 S일단 SNR로 두었음. 따라서 value는 D^-alpha. alpha는 NLos로 가정하여 -4의 값
+UE는 1~m명, BS는 1~n개, 거리 matrix D는 n by m matrix로 D_ij=norm(BS_i=UE_j)
+연산속도를 위해 D_ij=(BS_ix-UE_jx)**2+(BS_iy-UE_jy)**2
+BS와 UE의 xy좌표는 ppp로 나중에 뿌림. 지금은 위치 정해져 있다고 생각
+시작 노드: BS 모두 켜진 상태(BS_n=1 for every n)-->통신 성능이 threshold이하이면 terminate되는 조건해야하므로, 
 """
-#MCTS 알고리즘 사용
-#tree policy, 
-#defalut policy, 일단 랜덤
-''' terminal 조건 만들어서 반드시 특정 시간이내
- episode가 끝나게 만들기.
- 
+#########대략적인 MCTS##############
 '''
-#
+def MCTS(node=root node, threshold, terminal)
+    initialize root node
+    for search tree:
+        calculate the rewards
+        if rewards < threshold:
+            end for
+        elif:
+            moves to next nodes
+        if node arrives terminal:
+            end for
+        update policy(backpropagate)
+    return best policy/reward
+'''
+
+
+import random
+import math
+import hashlib
+import argparse
+#필요한 변수, n(int),m(int), matrix D, BS vector(n by 1), UE vector(m by 1)
+n=10 #BS의 개수
+m=20 #UE의 개수
 class BS():
-    def setBS(self,*):
-        self.state =state
-        self.
-        
-    #BS가 켜져있으면 1, BS가 꺼져있으면 0
-    pass
-n=10 #n은 일단 10개로
-#for i in range(n): 
-    #s0=State()
-    #...
-    #s9=State() #나중에 변수 반복가능하게 수정    
-    
-'''MCTS로, 처음 노드에서 BS가 다 켜져있고, 
-'''
-class Node():   #중간에서 terminate되지 않을시 episode는 node 1~n까지
-    def __init__(self, state,*):
+    def setBS(self,state=1,posisition): #initialize BS
+        self.state=state #root node(시작노드)의 BS는 켜진채로 시작. or self.state=state?
+        self.position=position #나중에 ppp
+        pass
+class UE():
+    def setUE(self,position):
+        self.position=position #나중에 ppp
+        pass 
+
+class Node():   #중간에서 terminate되지 않을시 episode는 node 1~n까지, node_i는 BS_i를 policy에 따라 켜고 끈다.
+    def __init__(self, state,reward):
         self.state=state
-        self.reward="SNR"
-    def.
+        self.reward= #SNR
+        
+
+    
     
     
 def TREEPOLICY(node):
@@ -43,30 +58,8 @@ def TREEPOLICY(node):
         if reward is under threshold:
             terminate and backpropagation
         elif 
-"""     
-        
-#!/usr/bin/env python
-import random
-import math
-import logging
-import hashlib
-import argparse
 
 
-"""
-A quick Monte Carlo Tree Search implementation.  For more details on MCTS see See http://pubs.doc.ic.ac.uk/survey-mcts-methods/survey-mcts-methods.pdf
-
-The State is just a game where you have NUM_TURNS and at turn i you can make
-a choice from [-2,2,3,-3]*i and this to to an accumulated value.  The goal is for the accumulated value to be as close to 0 as possible.
-
-The game is not very interesting but it allows one to study MCTS which is.  Some features 
-of the example by design are that moves do not commute and early mistakes are more costly.  
-
-In particular there are two models of best child that one can use 
-"""
-
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger('MyLogger')
 
 class State():
 	NUM_TURNS = 10	
