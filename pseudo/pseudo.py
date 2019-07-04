@@ -1,4 +1,4 @@
-""" RL design - MCTS
+e""" RL design - MCTS
 State: 각 BS의 켜지고 꺼진 상태, BS n개면 특정 node에서 state도 n개. discrete state.
 action: 각 BS에 대해 켜고 끄는 것을 action으로, 켜면 1, 끄면 0. action은 policy에 의해 결정. discrete action
 policy를 최적화, 초기 policy는 랜덤. episode가 끝날때 reward에 따라 update. -->update 방식?
@@ -34,8 +34,8 @@ import argparse
 n=10 #BS의 개수
 m=20 #UE의 개수
 class BS():
-    def setBS(self,state=1,posisition): #initialize BS
-        self.state=state #root node(시작노드)의 BS는 켜진채로 시작. or self.state=state?
+#    def setBS(self,state=1,posisition): #initialize BS
+#        self.state=state #root node(시작노드)의 BS는 켜진채로 시작. or self.state=state?
         self.position=position #나중에 ppp
         pass
 class UE():
