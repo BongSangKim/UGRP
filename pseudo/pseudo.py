@@ -25,7 +25,15 @@ def MCTS(node=root node, threshold, terminal)
     return best policy/reward
 '''
 
-
+'''
+@@@env code에서 rl code로 보내는 거 고려할 것
+action(n by 1), n은 BS개수, 10개 이하로
+def step(action):
+    pass
+    return reward, done, next state
+reset - UE 분포같은 거 다 초기화하는 녀석
+input, output은 gym env 기준으로 할 예정
+'''
 import random
 import math
 import hashlib
