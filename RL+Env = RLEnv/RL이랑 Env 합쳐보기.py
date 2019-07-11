@@ -84,6 +84,7 @@ Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 �
 #############################RL code-MCTS######################################
 '''
 ##############################original code####################################
+7/12일 발표자료 7쪽? 참고
 class state():
     def isTerminal():
         pass
@@ -188,7 +189,7 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 
 		raise Exception("Should never reach here")
 
-	def backpropogate(self, node, reward):
+	def backpropogate(self, node, reward): #backpropagate? 오타?
 		while node is not None:
 			node.numVisits += 1
 			node.totalReward += reward
