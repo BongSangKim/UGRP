@@ -1,5 +1,4 @@
-from __future__ import division  #python 2.x 호환
-
+from __future__ import division  #python 2.x 호환. 없어도 상관없음
 import time        #time.time() 사용, 현재시간 호출
 import math        #제곱근, log 사용
 import random      #random.choice()사용
@@ -10,73 +9,72 @@ import numpy as np
 import tensorflow as tf
 #import pandas as pd
 
-#=====================재현이 코드부분===========================================
+#=====================Environment code=========================================
+#US_Xposition,Yposition ->UE_Xposition,Yposition으로?
+#assosiation 부분 association으로 변경함(오타수정)
 class UDNEnv(gym.Env):
 
-	def __init__(self):
-		#변수 선언
-		self.d_attenuation = -4
-		self.state = None
-		self.BSposition = np.transpose(np.loadtxt('BSposition.csv', delimiter=','))
-		self.BSnum = len(BSposition)
-		self.Area = 10000
-		self.usernum = 16
-		self.done = False
-		self.BSpower = tf.ones([1,BSnum])
-		self.d_at_tensor = tf.fill([1,usernum],-4)
-		self.US_Xposition = tf.random_uniform([1,usernum],0,Area)
-		self.US_Yposition = tf.random_uniform([1,usernum],0,Area)
+	def __init__(self):  #변수 선언
+		self.d_attenuation = -4 #거리감쇠 alpha값(NLoS)
+		self.BSposition = np.transpose(np.loadtxt('BSposition.csv', delimiter=','))  #BS위치는 변하지 않으므로 ppp로 뿌려진 좌표값(csv파일, 1 by n일듯) 사용, ppp.py로 만들고 경로 일치시키기(pandas 사용)
+		self.BSnum = len(self.BSposition) #BSnum=n
+		self.state = tf.ones([1,self.BSnum])
+		self.Area = 10000  #면적
+		self.usernum = 16  #UE 개수
+		self.done = False  #done값 이 True일때 terminate
+		#self.BSpower = tf.ones([1,BSnum])  #BS energy consumptino을 고려할 때 사용할 수 있을듯
+		self.d_at_tensor = tf.fill([1,self.usernum],-4)
+		self.UE_Xposition = tf.random_uniform([1,self.usernum],0,self.Area)  #UE x,y를 랜덤으로 뿌린것(ppp는 아님)
+		self.UE_Yposition = tf.random_uniform([1,self.usernum],0,self.Area)
 		self.reward = None
-		self.BS_user_distance = tf.zeros(BSnum,usernum,2)
-		self.BSdistance = tf.zeros(BSnum,usernum)
-		self.user_assosiation = tf.zeros([1,usernum])
+		self.BS_user_distance = tf.zeros([self.BSnum,self.usernum,2]) 
+		self.BSdistance = tf.zeros([self.BSnum,self.usernum]) 
+		self.user_association = tf.zeros([1,self.usernum])  
 		self.SNR = None
 
 	def step(self, action):
-		state = self.state
 		state = action
-		Econsumption = tf.reduce_sum(state)
-		distance = np.array(BSdistance)
+		self.Econsumption = tf.reduce_sum(state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
 		
 		#BS-User 거리 계산
-		for i in range(BSnum):
-			for j in range(usernum):
-				BS_user_distance[i][j][0] = BSposition[i][0] - US_Xposition[j]
-				BS_user_distance[i][j][1] = BSposition[i][1] - US_Yposition[j]
-		BSdistance = np.linalg.norm(BS_user_distance, axis=2, ord = 2)
+		for i in range(self.BSnum):
+			for j in range(self.usernum):
+				self.BS_user_distance[i][j][0] = self.BSposition[i][0] - self.UE_Xposition[j]
+				self.BS_user_distance[i][j][1] = self.BSposition[i][1] - self.UE_Yposition[j]
+		self.BSdistance = np.linalg.norm(self.BS_user_distance, axis=2, ord = 2)
+		self.distance = np.array(self.BSdistance)    #np.array랑  tf행렬이랑 계산되나?? tf쪽으로 계산되는듯
 		#거리 계산 종료
 		
-		user_assosiation = assosiation(state, BSdistance)
-		SNR = tf.pow(user_assosiation,d_at_tensor) #SNR 계산
+		self.user_association = self.association(self.state, self.BSdistance)
+		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
-		reward = tf.reduce_sum(SNR) / tf.reduce_sum(state) #reward 계산
+		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
 
-		self.US_Xposition = tf.random_uniform([1,usernum],0,Area) #유저 위치 랜덤 배치
-		self.US_Yposition = tf.random_uniform([1,usernum],0,Area)
-		return reward, state
+		self.UE_Xposition = tf.random_uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
+		self.UE_Yposition = tf.random_uniform([1,self.usernum],0,self.Area)
+		return self.reward, self.state
 
-		#BS-User assosiation 하는 함수
-	def assosiation(self, state, distance):
-		assosiation_distance = tf.zeros([1,usernum])
-		assosiationdistance = [BSnum, usernum]
+		#BS-User association 하는 함수
+	def association(self, state, distance):
+		association_distance = tf.zeros([1,self.usernum])
+		associationdistance = [self.BSnum, self.usernum]
 
 		#전원 off되어 있는 BS에서 유저까지의 거리를 무한대로 설정
 		for i in len(state):
 			if state[i] == 0:
-				for j in len(usernum):
-					assosiationdistance[i][j] = math.inf
+				for j in len(self.usernum):
+					associationdistance[i][j] = math.inf  #나중에 계산 오류날 수도 있으니까 inf값 대신 area밖으로 나가는 특정값을 쓰는 것 고려.
 		
-		assosiation_distance = tf.math.reduce_min(assosiationdistance, axis = 0)
-		return assosiation_distance
-
+		association_distance = tf.math.reduce_min(associationdistance, axis = 0)
+		return association_distance
 
 	def reset(self):
-		self.state = self.tf.ones([1,BSnum])
+		self.state = tf.ones([1,self.BSnum])
 		self.done = False
 		return state
-#=====================재현이 코드부분===========================================
+#=====================Environment code=========================================
 
-###################라이브러리 쓸 때 입력해야하는 것##############################
+#############################RL code-MCTS######################################
 class state():
     def isTerminal():
         pass
@@ -141,7 +139,7 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 
         if self.limitType == 'time':  #limitType이 time일때
             timeLimit = time.time() + self.timeLimit / 1000
-            while time.time() < timeLimit #timeLimit전까지 계속 search.....
+            while time.time() < timeLimit: #timeLimit전까지 계속 search.....
                 self.executeRound()
         else: #limitType 이 iterations일때
             for i in range(self.searchLimit):

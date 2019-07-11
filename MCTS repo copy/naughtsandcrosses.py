@@ -5,7 +5,6 @@ from mcts import mcts
 from functools import reduce
 import operator
 
-
 class NaughtsAndCrossesState():
     def __init__(self):
         self.board = [[0, 0, 0,0], [0,0, 0, 0], [0,0, 0, 0]]
