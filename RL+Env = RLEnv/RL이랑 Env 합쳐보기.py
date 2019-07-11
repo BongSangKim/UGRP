@@ -24,8 +24,8 @@ class UDNEnv(gym.Env):
 		self.done = False  #done값 이 True일때 terminate
 		#self.BSpower = tf.ones([1,BSnum])  #BS energy consumptino을 고려할 때 사용할 수 있을듯
 		self.d_at_tensor = tf.fill([1,self.usernum],-4)
-		self.UE_Xposition = tf.random_uniform([1,self.usernum],0,self.Area)  #UE x,y를 랜덤으로 뿌린것(ppp는 아님)
-		self.UE_Yposition = tf.random_uniform([1,self.usernum],0,self.Area)
+		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area)  #UE x,y를 랜덤으로 뿌린것(ppp는 아님)
+		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
 		self.reward = None
 		self.BS_user_distance = tf.zeros([self.BSnum,self.usernum,2]) 
 		self.BSdistance = tf.zeros([self.BSnum,self.usernum]) 
@@ -49,9 +49,8 @@ class UDNEnv(gym.Env):
 		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
 		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
-
-		self.UE_Xposition = tf.random_uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
-		self.UE_Yposition = tf.random_uniform([1,self.usernum],0,self.Area)
+		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
+		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
 		return self.reward, self.state
 
 		#BS-User association 하는 함수
@@ -71,10 +70,24 @@ class UDNEnv(gym.Env):
 	def reset(self):
 		self.state = tf.ones([1,self.BSnum])
 		self.done = False
-		return state
+		return self.state
+###추가코드
+	def isTerminal(): #return은 boolean으로 
+		if :#state is terminal
+			return True
+		else: #state is nonterminal
+			return False
+	def getPossibleActions(UDNEnv.state):
+		pass
+	def takeAction(action):
+		pass
+	def getReward(UDNEnv.state):
+		pass
 #=====================Environment code=========================================
 
 #############################RL code-MCTS######################################
+'''
+##############################original code####################################
 class state():
     def isTerminal():
         pass
@@ -86,13 +99,20 @@ class state():
         pass
     def getReward(): #Returns the reward for this state. Only needed for terminal states.
         pass
-    
+##############################original code####################################
+'''
+#######state class 제거 및 함수변수로 UDNEnv.state 사용#########################
+Env = UDNEnv()
+initialState = Env.state
+
+
+
 #state를 class로 사용하지 않으면, state 클래스 밑에 있는 함수 네개는 따로 정의한뒤에, mcts 라이브러리에 있는 state.def() 부분을 def(UDNenv.state)형태로 바꾸면 된다.
 #이렇게 하면 RL코드를 크게 수정하지 않고 돌릴 수 있을것 같음
 ###############################################################################    
 
 def randomPolicy(state):
-    while not state.isTerminal():   #state class안에 isTerminal을 가져오는 것
+    while not state.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
         try:
             action = random.choice(state.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
         except IndexError:
