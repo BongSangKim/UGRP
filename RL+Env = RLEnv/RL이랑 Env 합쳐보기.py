@@ -26,7 +26,7 @@ class UDNEnv(gym.Env):
 		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임
 
 	def step(self, action):
-		#state = action #takeAction 함수에서 newstate=action함
+		state = action #takeAction 함수에서 newstate=action함
 		self.Econsumption = tf.reduce_sum(self.state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
 		
 		#BS-User 거리 계산
@@ -42,11 +42,13 @@ class UDNEnv(gym.Env):
 		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
 		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
+		self.reward = float(self.reward)
 		print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
 		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
 		return self.reward, self.state
 		
+	
 		#BS-User association 하는 함수
 	def association(self, state, distance):
 		association_distance = tf.zeros([1,self.usernum])
