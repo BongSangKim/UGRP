@@ -1,11 +1,6 @@
-from __future__ import division  #python 2.x 호환. 없어도 상관없음
 import time, math, random, gym
-#from copy import deepcopy
-#from gym import space, logger
-#from gym.utils import seeding
 import numpy as np
 import tensorflow as tf
-#import pandas as pd
 
 #__dict__로 변수 내부 확인가능, 디버그할때 참고
 #=====================Environment code=========================================
@@ -26,13 +21,14 @@ class UDNEnv(gym.Env):
 		self.BS_user_distance = tf.zeros([self.BSnum,self.usernum,2]) 
 		self.BSdistance = tf.zeros([self.BSnum,self.usernum]) #BSnum by usernum 크기의 텐서 with all elements 0
 		self.user_association = tf.zeros([1,self.usernum])  #1 by usernum 크기의 텐서 with all elements 0
-		self.SNR = None
+		#self.SNR = None
+		self.SNR = 100 #코드 오류 테스트용 임의값
 		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임
 
 	def step(self, action):
 		#state = action #takeAction 함수에서 newstate=action함
 		self.Econsumption = tf.reduce_sum(self.state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
-
+		
 		#BS-User 거리 계산
 		for i in range(self.BSnum):
 			for j in range(self.usernum):
@@ -45,12 +41,12 @@ class UDNEnv(gym.Env):
 		self.user_association = self.association(self.state, self.BSdistance)
 		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
-		#self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산, getReward에 들어가야될듯. Env 2개이상 될때 나중에 고려하기
-		
+		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
+		print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
 		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
 		return self.reward, self.state
-
+		
 		#BS-User association 하는 함수
 	def association(self, state, distance):
 		association_distance = tf.zeros([1,self.usernum])
@@ -78,26 +74,23 @@ class UDNEnv(gym.Env):
 	def getPossibleActions(self):
 		#state와 차원이 같고 0 or 1값을 가지는 텐서. action->state
 		possibleActions = tf.ones([1,self.BSnum])
-		print(possibleActions[1,1])
 		for i in range(0,self.BSnum):
 			possibleActions[0][i]=random.randrange(0,2) #0 or 1 값
 		return possibleActions
 
-	def takeAction(self, action):  #action=mcts.search(initialstate=Env.state)
-		newState = action
+	def takeAction(self, action):  
+		newReward, newState = self.step(action)
 		return newState
 	
-	def getReward(self):
+	def getReward(self):  ###return 값을 현재 list(텐서)로 return하는데 flaot형(or int)로 return해야함. 수정후 오류 해결되면 같은 주석들 삭제 
 		if self.isTerminal() ==True:
-			return tf.reduce_sum(self.SNR) / self.Econsumption
+			newReward, newState = self.step(action)
+		return newReward
 		#return reward
 
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
-
-
 #=====================Environment code=========================================
 
-#############################RL code-MCTS######################################
 '''
 ##############################original code####################################
 7/12일 발표자료 7쪽? 참고
@@ -116,20 +109,20 @@ class state():
 '''
 #######state class 제거 및 함수변수로 UDNEnv.state 사용#########################
 
-
-
 #state를 class로 사용하지 않으면, state 클래스 밑에 있는 함수 네개는 따로 정의한뒤에, mcts 라이브러리에 있는 state.def() 부분을 def(UDNenv.state)형태로 바꾸면 된다.
 #이렇게 하면 RL코드를 크게 수정하지 않고 돌릴 수 있을것 같음
 ###############################################################################    
 
-def randomPolicy(state):
+def randomPolicy(state,getreward=[]):
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
 		try:
 			action = random.choice(Env.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		state = Env.takeAction(action) #action에 따라 state 업데이트
-	return Env.getReward()
+		getreward = Env.getReward(action)
+	return getreward  ###########여기서 reward를 list로 return하지 않고 float형으로 return해야함
+	#return Env.getReward()
 
 
 class treeNode():                               #트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -141,7 +134,6 @@ class treeNode():                               #트리 노드 정의. 노드에
 		self.numVisits = 0
 		self.totalReward = 0
 		self.children = {}
-
 
 
 class mcts():                   #explorationConstant는 값을 바꾸어 학습시킬 수 있다. 
@@ -182,7 +174,7 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 	def executeRound(self):
 		node = self.selectNode(self.root)
 		reward = self.rollout(node.state)
-		self.backpropogate(node, reward)
+		self.backpropagate(node, reward) #reward가 지금 list값. node가 int값
 
 	def selectNode(self, node):
 		while not node.isTerminal:
@@ -204,10 +196,12 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 
 		raise Exception("Should never reach here")
 
-	def backpropogate(self, node, reward): #backpropagate? 오타?
+	def backpropagate(self, node, reward):
 		while node is not None:
 			node.numVisits += 1
-			node.totalReward += reward
+			print('type of node:',type(node))
+			print('type of reward:',type(reward))
+			node.totalReward += reward  ##reward가 원래 라이브러리에서는 float가 기대되는데 list가 들어있어 오류...
 			node = node.parent
 
 	def getBestChild(self, node, explorationValue):

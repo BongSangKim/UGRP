@@ -102,6 +102,8 @@ class mcts():
     def backpropogate(self, node, reward):
         while node is not None:
             node.numVisits += 1
+            print(type(node))
+            print(type(reward))
             node.totalReward += reward
             node = node.parent
 
