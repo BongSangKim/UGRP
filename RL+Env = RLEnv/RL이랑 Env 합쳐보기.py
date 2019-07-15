@@ -13,20 +13,20 @@ class UDNEnv(gym.Env):
 		self.d_attenuation = -4 #거리감쇠 alpha값(NLoS)
 		self.BSposition = np.transpose(np.loadtxt('BSposition.csv', delimiter=','))  #BS위치는 불변, ppp.py로 csv파일 생성하여 사용, ppp.py는 pandas 사용, 경로 일치시키기. 1 by n인듯
 		self.BSnum = len(self.BSposition) #BSnum=n
-		self.state = tf.ones([1,self.BSnum])
+		self.state = tf.ones([1,self.BSnum]) #BS 초기 state는 on 상태
 		self.Area = 10000  #면적
 		self.usernum = 16  #UE 개수
-		self.done = False  #done값 이 True일때 terminate
+		self.done = False  #done값 이 True일때 terminate된다. 지금은 isTerminal(self)가 있어서 사용안함
 		#self.BSpower = tf.ones([1,BSnum])  #BS energy consumptino을 고려하여 추가해둠
 		self.d_at_tensor = tf.fill([1,self.usernum],-4)
 		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area)  #UE x,y를 랜덤으로 뿌린것(ppp는 아님)
 		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
-		self.reward = None
+		self.reward = None #getReward함수 변수로 쓰여야할듯
 		self.BS_user_distance = tf.zeros([self.BSnum,self.usernum,2]) 
-		self.BSdistance = tf.zeros([self.BSnum,self.usernum]) 
-		self.user_association = tf.zeros([1,self.usernum])  
+		self.BSdistance = tf.zeros([self.BSnum,self.usernum]) #BSnum by usernum 크기의 텐서 with all elements 0
+		self.user_association = tf.zeros([1,self.usernum])  #1 by usernum 크기의 텐서 with all elements 0
 		self.SNR = None
-		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동
+		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임
 
 	def step(self, action):
 		state = action
@@ -44,7 +44,8 @@ class UDNEnv(gym.Env):
 		self.user_association = self.association(self.state, self.BSdistance)
 		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
-		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
+		#self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산, getReward에 들어가야될듯. Env 2개이상 될때 나중에 고려하기
+		
 		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
 		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
 		return self.reward, self.state
@@ -58,7 +59,7 @@ class UDNEnv(gym.Env):
 		for i in len(state):
 			if state[i] == 0:
 				for j in len(self.usernum):
-					associationdistance[i][j] = math.inf  #나중에 계산 오류날 수도 있으니까 inf값 대신 area밖으로 나가는 특정값을 쓰는 것 고려.
+					associationdistance[i][j] = math.inf 
 		association_distance = tf.math.reduce_min(associationdistance, axis = 0)
 		return association_distance
 
@@ -77,7 +78,9 @@ class UDNEnv(gym.Env):
 	def takeAction(action): #action=mcts.search(initialstate=Env.state)
 		pass
 	def getReward(self):
-		pass
+		if self.isTerminal() ==True:
+			return tf.reduce_sum(self.SNR) / self.Econsumption
+		#return reward
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
 #=====================Environment code=========================================
 
@@ -113,7 +116,7 @@ def randomPolicy(state):
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		state = state.takeAction(action) #action에 따라 state 업데이트
-	return state.getReward()
+	return Env.getReward()
 
 
 class treeNode():                               #트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -152,7 +155,6 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 
 	def search(self, initialState):  #initialstate=Env.state
 		self.root = treeNode(initialState, None) #라이브러리 앞에 있는 treenode class
-		print(self.limitType)
 		if self.limitType == 'time':  #limitType이 time일때
 			timeLimit = time.time() + self.timeLimit / 1000
 			while time.time() < timeLimit: #timeLimit전까지 계속 search.....
@@ -213,6 +215,6 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 				return action
 
 
-test=Env.state
 initialState = Env.state
-action = mcts.search(Env,initialState=initialState)
+MCTS=mcts(10000) #timeLimit 변수값 10000
+action = MCTS.search(initialState=initialState)
