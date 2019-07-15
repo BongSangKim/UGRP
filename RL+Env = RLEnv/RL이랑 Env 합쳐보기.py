@@ -1,5 +1,6 @@
 from __future__ import division  #python 2.x 호환. 없어도 상관없음
 import time, math, random, gym
+#from copy import deepcopy
 #from gym import space, logger
 #from gym.utils import seeding
 import numpy as np
@@ -29,8 +30,8 @@ class UDNEnv(gym.Env):
 		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임
 
 	def step(self, action):
-		state = action
-		self.Econsumption = tf.reduce_sum(state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
+		#state = action #takeAction 함수에서 newstate=action함
+		self.Econsumption = tf.reduce_sum(self.state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
 
 		#BS-User 거리 계산
 		for i in range(self.BSnum):
@@ -73,15 +74,27 @@ class UDNEnv(gym.Env):
 			return True
 		else: #state is nonterminal
 			return False
+	
 	def getPossibleActions(self):
-		pass
-	def takeAction(action): #action=mcts.search(initialstate=Env.state)
-		pass
+		#state와 차원이 같고 0 or 1값을 가지는 텐서. action->state
+		possibleActions = tf.ones([1,self.BSnum])
+		print(possibleActions[1,1])
+		for i in range(0,self.BSnum):
+			possibleActions[0][i]=random.randrange(0,2) #0 or 1 값
+		return possibleActions
+
+	def takeAction(self, action):  #action=mcts.search(initialstate=Env.state)
+		newState = action
+		return newState
+	
 	def getReward(self):
 		if self.isTerminal() ==True:
 			return tf.reduce_sum(self.SNR) / self.Econsumption
 		#return reward
+
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
+
+
 #=====================Environment code=========================================
 
 #############################RL code-MCTS######################################
@@ -112,16 +125,16 @@ class state():
 def randomPolicy(state):
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
 		try:
-			action = random.choice(state.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
+			action = random.choice(Env.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
-		state = state.takeAction(action) #action에 따라 state 업데이트
+		state = Env.takeAction(action) #action에 따라 state 업데이트
 	return Env.getReward()
 
 
 class treeNode():                               #트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
 	def __init__(self, state, parent):
-		self.state = state #Env.state
+		self.state = Env.state #state = state 를 state = Env.state로 바꿈
 		self.isTerminal = Env.isTerminal()   
 		self.isFullyExpanded = self.isTerminal
 		self.parent = parent
