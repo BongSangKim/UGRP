@@ -23,7 +23,8 @@ class UDNEnv(gym.Env):
 		self.user_association = tf.zeros([1,self.usernum])  #1 by usernum 크기의 텐서 with all elements 0
 		#self.SNR = None
 		self.SNR = 100 #코드 오류 테스트용 임의값
-		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임
+		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임. 지금 timeLimit가 mcts에서 한개, UDNEnv에서 한개 쓰이는데 코드 구현 후 다시 코드 재구성 시도하기.
+		
 
 	def step(self, action):
 		state = action #takeAction 함수에서 newstate=action함
@@ -120,7 +121,8 @@ def randomPolicy(state):
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		state = Env.takeAction(action) #action에 따라 state 업데이트
 		#return the reward at state
-	return Env.getReward(action)
+	return 15 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
+	#return Env.getReward(action)
 
 
 class treeNode():                               #트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -197,12 +199,13 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 	def backpropagate(self, node, reward):
 		while node is not None:
 			node.numVisits += 1
-			node.totalReward += reward  ##reward가 원래 라이브러리에서는 float가 기대되는데 list가 들어있어 오류...
+			node.totalReward += reward  
 			node = node.parent
 
 	def getBestChild(self, node, explorationValue):
 		bestValue = float("-inf")
-		bestNodes = []
+		bestNodes = [1,2,3] #오류 pass, ㅠbestNodes가 update가 안되고 있음
+		#bestNodes = []
 		for child in node.children.values():
 			nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(2 * math.log(node.numVisits) / child.numVisits)
 			if nodeValue > bestValue:
@@ -221,3 +224,5 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 initialState = Env.state
 MCTS=mcts(10000) #timeLimit 변수값 10000
 action = MCTS.search(initialState=initialState)
+
+print(action)
