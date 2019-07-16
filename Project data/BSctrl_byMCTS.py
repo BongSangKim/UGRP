@@ -1,7 +1,7 @@
 import time, math, random, gym
 import numpy as np
 #import tensorflow as tf
-
+#7.16 tensor ->numpy array로 전부 교체(tensor에서 indexing 문제 때문)
 #__dict__로 변수 내부 확인가능, 디버그할때 참고
 #=====================Environment code=========================================
 class UDNEnv(gym.Env):
