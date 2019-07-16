@@ -42,7 +42,7 @@ class UDNEnv(gym.Env):
 		self.SNR = tf.pow(self.user_association,self.d_at_tensor) #SNR 계산
 
 		self.reward = tf.reduce_sum(self.SNR) / self.Econsumption #reward 계산
-		self.reward = float(self.reward)
+		self.reward = tf.to_float(self.reward)
 		print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = tf.random.uniform([1,self.usernum],0,self.Area) #유저 위치 랜덤 배치
 		self.UE_Yposition = tf.random.uniform([1,self.usernum],0,self.Area)
@@ -84,11 +84,9 @@ class UDNEnv(gym.Env):
 		newReward, newState = self.step(action)
 		return newState
 	
-	def getReward(self):  ###return 값을 현재 list(텐서)로 return하는데 flaot형(or int)로 return해야함. 수정후 오류 해결되면 같은 주석들 삭제 
-		if self.isTerminal() ==True:
-			newReward, newState = self.step(action)
+	def getReward(action): 
+		newReward, newState = self.step(action)
 		return newReward
-		#return reward
 
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
 #=====================Environment code=========================================
@@ -114,17 +112,15 @@ class state():
 #state를 class로 사용하지 않으면, state 클래스 밑에 있는 함수 네개는 따로 정의한뒤에, mcts 라이브러리에 있는 state.def() 부분을 def(UDNenv.state)형태로 바꾸면 된다.
 #이렇게 하면 RL코드를 크게 수정하지 않고 돌릴 수 있을것 같음
 ###############################################################################    
-
-def randomPolicy(state,getreward=[]):
+def randomPolicy(state):
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
 		try:
 			action = random.choice(Env.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		state = Env.takeAction(action) #action에 따라 state 업데이트
-		getreward = Env.getReward(action)
-	return getreward  ###########여기서 reward를 list로 return하지 않고 float형으로 return해야함
-	#return Env.getReward()
+		#return the reward at state
+	return Env.getReward(action)
 
 
 class treeNode():                               #트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -187,10 +183,10 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 		return node
 
 	def expand(self, node):
-		actions = node.state.getPossibleActions()
+		actions = node.Env.getPossibleActions()
 		for action in actions:
 			if action not in node.children:
-				newNode = treeNode(node.state.takeAction(action), node)
+				newNode = treeNode(node.Env.takeAction(action), node)
 				node.children[action] = newNode
 				if len(actions) == len(node.children):
 					node.isFullyExpanded = True
@@ -201,8 +197,6 @@ class mcts():                   #explorationConstant는 값을 바꾸어 학습�
 	def backpropagate(self, node, reward):
 		while node is not None:
 			node.numVisits += 1
-			print('type of node:',type(node))
-			print('type of reward:',type(reward))
 			node.totalReward += reward  ##reward가 원래 라이브러리에서는 float가 기대되는데 list가 들어있어 오류...
 			node = node.parent
 
