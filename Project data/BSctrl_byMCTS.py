@@ -1,7 +1,7 @@
 import time, math, random, gym
 import numpy as np
-#import tensorflow as tf
-#7.16 tensor ->numpy array로 전부 교체(tensor에서 indexing 문제 때문)
+#import tensorflow as tf 
+#7월 16일 텐서포기, np.array로 교체(tensor는 indexing 안됨)
 #__dict__로 변수 내부 확인가능, 디버그할때 참고
 #=====================Environment code=========================================
 class UDNEnv(gym.Env):
@@ -13,7 +13,7 @@ class UDNEnv(gym.Env):
 		self.state = np.ones((1,self.BSnum)) #BS on으로 초기화
 		self.Area = 10000  #면적
 		self.usernum = 16  #UE 개수
-		self.done = False  #True일때 terminate. isTerminal(self)가 있어서 사용안함
+		#self.done = False  #True일때 terminate. isTerminal(self)가 있어서 사용안함
 		#self.BSpower = np.ones((1,BSnum))  #BS energy consumptino을 고려하여 추가해둠
 		self.d_at_tensor = np.full((1,self.usernum),-4)
 		self.UE_Xposition = np.random.uniform(0,self.Area,(1,self.usernum))  #UE x,y를 랜덤으로 뿌린것(ppp는 아님)
@@ -22,11 +22,13 @@ class UDNEnv(gym.Env):
 		self.BS_user_distance = np.zeros((2,self.BSnum,self.usernum))
 		self.BSdistance = np.zeros((self.BSnum,self.usernum)) #BSnum by usernum 크기의 텐서 with all elements 0
 		self.user_association = np.zeros([1,self.usernum])  #1 by usernum 크기의 텐서 with all elements 0
-		#self.SNR = None
-		self.SNR = 100 #코드 오류 테스트용 임의값
-		self.timeLimit = 10000 #mcts 코드에서 작동시키기 위해 mcts.py에서 UDNEnv class로 코드 이동, 현재 isTerminal 함수 변수로 쓰임. 지금 timeLimit가 mcts에서 한개, UDNEnv에서 한개 쓰이는데 코드 구현 후 다시 코드 재구성 시도하기.
-		self.possibleActions = np.ones((1,self.BSnum))
-		self.threshold = 1
+		self.SNR = None
+		#self.timeLimit = 10000 #mcts.py에서 가져옴. isTerminal() 조건으로 시간 쓸때 사용. 시간조건 쓸 경우 그냥 isTerminal 변수로 넣고 여기는 날리기
+		#self.possibleActions = np.ones((1,self.BSnum)) ############ 이거를 1 by BSnum인 list로 만들어서 callable하게.
+		self.possibleActions = []
+		for i in range(self.BSnum):
+			self.possibleActions.append(1)   #numpy.ndarray는 callable하지 않기 때문에 getPossibleActions()함수 사용불가해짐. 따라서 임시로 list형으로 만드는 코드
+		#print(self.possibleActions)
 	def step(self, action):
 		print('step')
 		state = action #takeAction 함수에서 newstate=action함
@@ -40,7 +42,7 @@ class UDNEnv(gym.Env):
 				self.BS_user_distance[0][i][j] = self.BSposition[i][0] - self.UE_Xposition[0][j]
 				self.BS_user_distance[1][i][j] = self.BSposition[i][1] - self.UE_Yposition[0][j]
 		self.BSdistance = np.linalg.norm(self.BS_user_distance, axis=1, ord = 2)
-		self.distance = np.array(self.BSdistance)    #np.array랑  tf행렬이랑 계산되나?? tf쪽으로 계산되는듯
+		self.distance = np.array(self.BSdistance)
 		#거리 계산 종료
 
 		self.user_association = self.association(self.state, self.BSdistance)
@@ -80,22 +82,30 @@ class UDNEnv(gym.Env):
 		return self.state
 	################mcts.py에서 사용할 함수부분 ############################
 	def isTerminal(self): #일단 시간조건->SNR threshold로
+		'''
+		self.threshold = 0.000001
+		#return False #terminal node나 SNR 터미널 조건 없다치고 ㄱㄱ!
 		newSNR, newReward, newState = self.step(action)
+		print('newSNR is:',newSNR)
 		if newSNR < self.threshold:
+			print("isTerminal is TRUE!!")
 			return True
 		else:
 			return False
+			#이 코드 사용
 		'''
+		self.timeLimit = 100
 		if time.time() > self.timeLimit: #state is terminal 
 			return True
 		else: #state is nonterminal
 			return False
-		'''
+			#이 코드 사용안함
+		
 	def getPossibleActions(self):
 		print('getPosssibleActions')
 		#state와 차원이 같고 0 or 1값을 가지는 텐서. action->state
 		for i in range(0,self.BSnum):
-			self.possibleActions[0][i]=random.randrange(0,2) #0 or 1 값
+			self.possibleActions[i]=random.randrange(0,2) #0 or 1 값
 		return self.possibleActions
 
 	def takeAction(self, action):  
@@ -131,28 +141,27 @@ def randomPolicy(state):
 		print('env not terminal')
 		try:
 			action = random.choice(Env.getPossibleActions()) #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
-			Env.getReward(action)
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		print('terminal@_@')
 		state = Env.takeAction(action) #action에 따라 state 업데이트
+	return Env.getReward(action)
 	#return the reward at state
-	return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
-	#return Env.getReward(action)
+	#return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
 
 
 class treeNode():	#트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
 	def __init__(self, state, parent):
 		print('class treeNode')
-		self.state = Env.state #state = state 를 state = Env.state로 바꿈
+		self.state = Env.state #state = state 를 state = Env.state로 바꿈 #step Func에서 state가져옴
 		self.isTerminal = Env.isTerminal()   
 		self.isFullyExpanded = self.isTerminal
 		self.parent = parent
 		self.numVisits = 0
 		self.totalReward = 0
 		self.children = {}
-		
-
+		self.getPossibleActions = Env.getPossibleActions()
+		self.takeAction = Env.takeAction
 class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다. 
 	def __init__(self, timeLimit=None, iterationLimit=None, explorationConstant=1 / math.sqrt(2), rolloutPolicy=randomPolicy):
 		#timeLimit,iterationLimit는 입력안하면 None이 초기값, 둘다 입력안하면 바로 아래 ValueError나옴
@@ -180,15 +189,18 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 	def search(self, initialState):  #initialstate=Env.state
 		print('search Funtion')
 		self.root = treeNode(initialState, None) #state=initialState, parent=None
-		if self.limitType == 'time':  
+		print('searching... until searchlimit')
+		if self.limitType == 'time': 
+			print('limitType: time') 
 			timeLimit = time.time() + self.timeLimit / 1000
 			while time.time() < timeLimit: 
 				self.executeRound()
 		else: 
-			print('terminate at searchlimit')
+			print('limitType: iteration')
 			for i in range(self.searchLimit):
 				self.executeRound()  
 		bestChild = self.getBestChild(self.root, 0)
+		print('search over...')
 		return self.getAction(self.root, bestChild)
 
 	def executeRound(self):
@@ -199,8 +211,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 
 	def selectNode(self, node):
 		print('selectNode')
+		print('node.isTerminal is:',node.isTerminal,'만약 True가 나오면 당신은 망했습니다ㅎㅎ ^_^; Terminal 조건,rootnode를 보세요')
 		while not node.isTerminal:
-			print('node is notTernimal')
 			if node.isFullyExpanded:
 				node = self.getBestChild(node, self.explorationConstant)
 			else:
@@ -209,11 +221,15 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 
 	def expand(self, node):
 		print('expand')
-		actions = node.Env.getPossibleActions()
+		################################### 임시로 pass 코드
+		#actions = [0,1,1,1,1,1,1] 
+		################################### 임시로 pass코드
+		actions =Env.getPossibleActions()
+		#actions = node.getPossibleActions() #원래 코드, node에 따라야 하니까 이게 맞음
 		for action in actions:
 			if action not in node.children:
-				newNode = treeNode(node.Env.takeAction(action), node)
-				node.children[action] = newNode
+				newNode = treeNode(node.takeAction(action), node)
+				node.children[action] = newNode 
 				if len(actions) == len(node.children):
 					node.isFullyExpanded = True
 				return newNode
@@ -228,8 +244,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 	def getBestChild(self, node, explorationValue):
 		print('getBestChild')
 		bestValue = float("-inf")
-		bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
-		#bestNodes = []
+		#bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
+		bestNodes = []
 		for child in node.children.values():
 			nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(2 * math.log(node.numVisits) / child.numVisits)
 			if nodeValue > bestValue:
