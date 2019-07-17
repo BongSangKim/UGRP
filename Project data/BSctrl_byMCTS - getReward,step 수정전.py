@@ -94,14 +94,10 @@ class UDNEnv(gym.Env):
 			return False
 			#이 코드 사용
 		'''
-		print('isTerminal is:')
-		self.timeLimit = 10
-		self.startTime = time.time()
-		if time.time() > self.startTime+self.timeLimit/1000: #state is terminal 
-			print('TRUE')
+		self.timeLimit = 100
+		if time.time() > self.timeLimit: #state is terminal 
 			return True
 		else: #state is nonterminal
-			print('FALSE')
 			return False
 			#이 코드 사용안함
 		
@@ -141,7 +137,6 @@ class state():
 def randomPolicy(state):
 	print('randomPolicy')
 	print(Env.isTerminal(),'Terminal check')
-	act=[]
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
 		print('env not terminal')
 		try:
@@ -150,11 +145,9 @@ def randomPolicy(state):
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		print('terminal@_@')
 		state = Env.takeAction(action) #action에 따라 state 업데이트
-		act=action
-		print('act',act)
-	#return Env.getReward(act)
+	return Env.getReward(action)
 	#return the reward at state
-	return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
+	#return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
 
 
 class treeNode():	#트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -251,8 +244,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 	def getBestChild(self, node, explorationValue):
 		print('getBestChild')
 		bestValue = float("-inf")
-		bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
-		#bestNodes = []
+		#bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
+		bestNodes = []
 		for child in node.children.values():
 			nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(2 * math.log(node.numVisits) / child.numVisits)
 			if nodeValue > bestValue:
