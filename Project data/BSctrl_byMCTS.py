@@ -32,9 +32,9 @@ class UDNEnv(gym.Env):
 		state = action #takeAction 함수에서 newstate=action함
 		self.Econsumption = np.sum(self.state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
 		#BS-User 거리 계산
-		print(self.BSnum,'by',self.usernum)
-		print(self.BS_user_distance)
-		print(self.UE_Xposition)
+		#print(self.BSnum,'by',self.usernum)
+		#print(self.BS_user_distance)
+		#print(self.UE_Xposition)
 		for i in range(self.BSnum):
 			for j in range(self.usernum):
 				self.BS_user_distance[0][i][j] = self.BSposition[i][0] - self.UE_Xposition[0][j]
@@ -44,11 +44,13 @@ class UDNEnv(gym.Env):
 		#거리 계산 종료
 
 		self.user_association = self.association(self.state, self.BSdistance)
+		self.user_association = float(self.user_association)  #SNR -4제곱하면 분수형이므로 float로 바꿔줘야 작동
+		#print(self.user_association,'UE association') 
 		self.SNR = np.power(self.user_association,-4) #SNR 계산
 
 		self.reward = np.sum(self.SNR) / self.Econsumption #reward 계산
 		#self.reward = np.to_float(self.reward)
-		print('set함수에서 rewardtype:',type(self.reward))
+		#print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = np.random.uniform(0,self.Area,(1,self.usernum)) #유저 위치 랜덤 배치
 		self.UE_Yposition = np.random.uniform(0,self.Area,(1,self.usernum))
 		return self.SNR,self.reward, self.state
@@ -61,10 +63,11 @@ class UDNEnv(gym.Env):
 		associationdistance = [self.BSnum, self.usernum]
 
 		#전원 off되어 있는 BS에서 유저까지의 거리를 무한대로 설정
-		print(len(state[0]))
-		print(state[0])
+		#print(len(state[0]))
+		#print(state,'state')
+		#print(state[0])
 		for i in range(len(state[0])): #state 값이 [[1 1 1 1]]형태여서 state[0]으로 사용
-			if state[i] == 0:
+			if state[0][i] == 0:
 				for j in len(self.usernum):
 					associationdistance[i][j] = math.inf 
 		association_distance = np.amin(associationdistance, axis = 0)
@@ -107,43 +110,40 @@ class UDNEnv(gym.Env):
 
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
 #=====================Environment code=========================================
-
-'''
-##############################original code####################################
+'''###########################original code####################################
 7/12일 발표자료 7쪽? 참고
 class state():
-    def isTerminal():
-        pass
-        #return state가 terminal인지 아닌지, boolean인가??
-        #terminal 조건: tree search 실행 시간, iteration 횟수 등, 우리는 노드가 n번째일 때에도 Terminal이게 짜야한다. 아마 이 조건들은 or 연산자로 묶일듯. timelimit 또는 iterationlimit중 하나만 쓰는게 편할 듯
     def getPossibleActions(): #Returns an iterable of all actions which can be taken from this state
         pass
     def takeAction(action): #Returns the state which results from taking action
         pass
     def getReward(): #Returns the reward for this state. Only needed for terminal states.
         pass
-##############################original code####################################
-'''
+##############################original code#################################'''
 #######state class 제거 및 함수변수로 UDNEnv.state 사용#########################
-
 #state를 class로 사용하지 않으면, state 클래스 밑에 있는 함수 네개는 따로 정의한뒤에, mcts 라이브러리에 있는 state.def() 부분을 def(UDNenv.state)형태로 바꾸면 된다.
 #이렇게 하면 RL코드를 크게 수정하지 않고 돌릴 수 있을것 같음
 ###############################################################################    
 def randomPolicy(state):
 	print('randomPolicy')
+	print(Env.isTerminal(),'Terminal check')
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
+		print('env not terminal')
 		try:
-			action = random.choice(Env.getPossibleActions())  #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
+			action = random.choice(Env.getPossibleActions()) #random.choice('아마 iterable변수')=하나 random으로 골라 return해줌
+			Env.getReward(action)
 		except IndexError:
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
+		print('terminal@_@')
 		state = Env.takeAction(action) #action에 따라 state 업데이트
-		#return the reward at state
-	return 15 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
+	#return the reward at state
+	return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
 	#return Env.getReward(action)
 
 
 class treeNode():	#트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
 	def __init__(self, state, parent):
+		print('class treeNode')
 		self.state = Env.state #state = state 를 state = Env.state로 바꿈
 		self.isTerminal = Env.isTerminal()   
 		self.isFullyExpanded = self.isTerminal
@@ -151,44 +151,43 @@ class treeNode():	#트리 노드 정의. 노드에 state 정해주면, state.isT
 		self.numVisits = 0
 		self.totalReward = 0
 		self.children = {}
-		print('treeNode')
+		
 
 class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다. 
 	def __init__(self, timeLimit=None, iterationLimit=None, explorationConstant=1 / math.sqrt(2), rolloutPolicy=randomPolicy):
 		#timeLimit,iterationLimit는 입력안하면 None이 초기값, 둘다 입력안하면 바로 아래 ValueError나옴
 		#rolloutPolicy는 따로 입력해주지 않으면 randompolicy인데, 나중에 UCB1값을 비교하는 식으로 하는 것이 좋을듯.
 		#처음에는 라이브러리 기본대로 randompolicy함수 만들어서 하고, 이후 UCB1 함수 따로 만들어서 rolloutPolicy 변수값을 UCB1으로 넣어보기
-		print('mcts')
+		print('class MCTS')
 		if timeLimit != None:
 			if iterationLimit != None:
 				raise ValueError("Cannot have both a time limit and an iteration limit")
 			# time taken for each MCTS search in milliseconds
-			print('timelimit')
 			self.timeLimit = timeLimit
 			self.limitType = 'time'
-		else: #timeLimit = None일때
+		else:
 			if iterationLimit == None:
 				raise ValueError("Must have either a time limit or an iteration limit")
 			# number of iterations of the search
 			if iterationLimit < 1:
 				raise ValueError("Iteration limit must be greater than one")
-			print('iterationLimit')
+			print('search is terminated by iterationLimit')
 			self.searchLimit = iterationLimit
 			self.limitType = 'iterations'
 		self.explorationConstant = explorationConstant
 		self.rollout = rolloutPolicy
 
 	def search(self, initialState):  #initialstate=Env.state
-		print('search')
+		print('search Funtion')
 		self.root = treeNode(initialState, None) #state=initialState, parent=None
-		if self.limitType == 'time':  #limitType이 time일때
+		if self.limitType == 'time':  
 			timeLimit = time.time() + self.timeLimit / 1000
-			while time.time() < timeLimit: #timeLimit전까지 계속 search.....
+			while time.time() < timeLimit: 
 				self.executeRound()
-		else: #limitType 이 iterations일때
+		else: 
 			print('terminate at searchlimit')
 			for i in range(self.searchLimit):
-				self.executeRound()  #SearchLmit전까지 계속 search...
+				self.executeRound()  
 		bestChild = self.getBestChild(self.root, 0)
 		return self.getAction(self.root, bestChild)
 
@@ -218,7 +217,6 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 				if len(actions) == len(node.children):
 					node.isFullyExpanded = True
 				return newNode
-
 		raise Exception("Should never reach here")
 
 	def backpropagate(self, node, reward):
@@ -230,7 +228,7 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 	def getBestChild(self, node, explorationValue):
 		print('getBestChild')
 		bestValue = float("-inf")
-		bestNodes = [1,2,3] #오류 pass, ㅠbestNodes가 update가 안되고 있음
+		bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
 		#bestNodes = []
 		for child in node.children.values():
 			nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(2 * math.log(node.numVisits) / child.numVisits)
@@ -247,13 +245,11 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 			if node is bestChild:
 				return action
 
-'''
 initialState = Env.state
-MCTS=mcts(10000) #timeLimit 변수값 10000
-action = MCTS.search(initialState=initialState)
-'''
-MCTS=mcts(None,2)
-action = MCTS.search(Env.state)
-print(Env.BSnum)
-print(Env.possibleActions)
-print(action)
+MCTS=mcts(None,1)
+action = MCTS.search(initialState)
+print('=============변수 체크용=============')
+print('Env.state is:',Env.state)
+print('Env.isTerminal is:',Env.isTerminal())
+print('possibleActions are:',Env.possibleActions)
+print('learnt action is:',action)
