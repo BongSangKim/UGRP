@@ -10,7 +10,7 @@ class UDNEnv(gym.Env):
 		self.BSposition = np.transpose(np.loadtxt('BSposition.csv', delimiter=','))
 		#BSposition.csv는 ppp.py로 생성. 1 by n
 		self.BSnum = len(self.BSposition) #BSnum=n
-		self.state = np.ones(self.BSnum) #BS on으로 초기화
+		self.state = np.ones((1,self.BSnum)) #BS on으로 초기화
 		self.Area = 10000  #면적
 		self.usernum = 16  #UE 개수
 		#self.done = False  #True일때 terminate. isTerminal(self)가 있어서 사용안함
@@ -21,21 +21,17 @@ class UDNEnv(gym.Env):
 		self.reward = None #getReward함수 변수로 쓰여야할듯
 		self.BS_user_distance = np.zeros((2,self.BSnum,self.usernum))
 		self.BSdistance = np.zeros((self.BSnum,self.usernum)) #BSnum by usernum 크기의 텐서 with all elements 0
-		self.user_association = np.zeros(self.usernum)  #1 by usernum 크기의 텐서 with all elements 0
+		self.user_association = np.zeros([1,self.usernum])  #1 by usernum 크기의 텐서 with all elements 0
 		self.SNR = None
 		#self.timeLimit = 10000 #mcts.py에서 가져옴. isTerminal() 조건으로 시간 쓸때 사용. 시간조건 쓸 경우 그냥 isTerminal 변수로 넣고 여기는 날리기
 		#self.possibleActions = np.ones((1,self.BSnum)) ############ 이거를 1 by BSnum인 list로 만들어서 callable하게.
 		self.possibleActions = [1]*self.BSnum #numpy.ndarray는 callable하지 않기 때문에 getPossibleActions()함수 사용불가해짐. 따라서 임시로 list형으로 만드는 코드
 		#print('possibleActions:',self.possibleActions)
 		self.dtime = 0
-		self.Binaryaction = None
-		self.actnum = 0
-		self.index = 0
 
 	def step(self, action):
 		print('$ step')
-		self.Binaryconvert(action, self.BSnum)
-		self.state = self.Binaryaction #takeAction 함수에서 newstate=action함
+		state = action #takeAction 함수에서 newstate=action함
 		self.Econsumption = np.sum(self.state)   #state가 1차원 벡터니까 reduce_sum은 스칼라. Econsumption은 total값임
 		#BS-User 거리 계산
 		#print(self.BSnum,'by',self.usernum)
@@ -50,54 +46,39 @@ class UDNEnv(gym.Env):
 		#거리 계산 종료
 
 		self.user_association = self.association(self.state, self.BSdistance)
-		#self.user_association = float(self.user_association)  #SNR -4제곱하면 분수형이므로 float로 바꿔줘야 작동
+		self.user_association = float(self.user_association)  #SNR -4제곱하면 분수형이므로 float로 바꿔줘야 작동
 		#print(self.user_association,'UE association') 
 		self.SNR = np.power(self.user_association,-4) #SNR 계산
 
-		self.reward = np.sum(self.SNR) * 10**13 / self.Econsumption #reward 계산
+		self.reward = np.sum(self.SNR) / self.Econsumption #reward 계산
 		#self.reward = np.to_float(self.reward)
 		#print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = np.random.uniform(0,self.Area,(1,self.usernum)) #유저 위치 랜덤 배치
 		self.UE_Yposition = np.random.uniform(0,self.Area,(1,self.usernum))
 		self.dtime += 1
-		print('Binaryaction is:',self.Binaryaction)
-		print('State is:',self.state)
-		print('Reward is:',self.reward)
-		return self.reward, self.state
+		return self.SNR,self.reward, self.state
 		
 		
 		#BS-User association 하는 함수
 	def association(self, state, distance):
 		print('$ association')
-		associationdistance = distance
+		association_distance = np.zeros((1,self.usernum))
+		associationdistance = [self.BSnum, self.usernum]
 
 		#전원 off되어 있는 BS에서 유저까지의 거리를 무한대로 설정
 		#print(len(state[0]))
-		#print(state,'state') 
+		#print(state,'state')
 		#print(state[0])
-		
-		for i in range(2):
-			if state[i] == 0:
-				for j in range(self.usernum):
+		for i in range(len(state[0])): #state 값이 [[1 1 1 1]]형태여서 state[0]으로 사용
+			if state[0][i] == 0:
+				for j in len(self.usernum):
 					associationdistance[i][j] = math.inf 
-		return associationdistance
+		association_distance = np.amin(associationdistance, axis = 0)
+		return association_distance
 
-	def Binaryconvert(self, num, BS):
-		self.Binaryaction = np.zeros(BS)
-		self.actnum = num
-		self.index = 0
-		while True:
-			if self.actnum == 0:
-				break
-			else:
-				self.Binaryaction[self.index] = self.actnum % 2
-				self.actnum = self.actnum // 2
-				self.index += 1
-		return None
-	
 	def reset(self):
 		print('$ reset')
-		self.state = np.zeros((1,self.BSnum))
+		self.state = np.ones((1,self.BSnum))
 		self.done = False
 		return self.state
 	################mcts.py에서 사용할 함수부분 ############################
@@ -128,9 +109,7 @@ class UDNEnv(gym.Env):
 	def getPossibleActions(self):
 		print('$ getPosssibleActions')
 		#state와 차원이 같고 0 or 1값을 가지는 텐서. action->state
-		self.possibleActions=[]
-		for i in range(2**self.BSnum):
-			self.possibleActions.append(i)
+		self.possibleActions = [0,1,2,3]
 		return self.possibleActions
 		'''
 		#가능한 Actions 모두 출력하게 하기.
@@ -143,12 +122,12 @@ class UDNEnv(gym.Env):
 		'''
 	def takeAction(self, action):  
 		print('$ takeAction')
-		newReward, newState = self.step(action)
+		newSNR, newReward, newState = self.step(action)
 		return newState
 	
-	def getReward(self, action): 
+	def getReward(action): 
 		print('$ getReward')
-		newReward, newState = self.step(action)
+		newSNR, newReward, newState = self.step(action)
 		return newReward
 
 Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 사용
@@ -160,7 +139,6 @@ Env = UDNEnv() #Env로 인스턴스 호출, mcts.py에서 Env를 호출하여 �
 ###############################################################################    
 def randomPolicy(state):
 	print('$ RandomPolicy')
-	action = random.choice(Env.getPossibleActions())
 	while not Env.isTerminal():   #state.isTerminal() 등 함수 4개는 Env.isTerminal()형태로 
 		print('state is not in terminal')
 		try:
@@ -169,9 +147,9 @@ def randomPolicy(state):
 			raise Exception("Non-terminal state has no possible actions: " + str(state))
 		state = Env.takeAction(action) #action에 따라 state 업데이트
 	print('state is in terminal, terminate randomPolicy, return reward at state\n -"state is not in terminal"이 출력이 안되면 isTerminal함수가 True만 return하는 상태입니다')
-	return Env.getReward(action)
-	#return the reward at state
-	#return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
+	#return Env.getReward(action)
+	#=====return the reward at state=====
+	return 5 #일단 pass, 터미널 state에서 reward 리턴하게끔 하기. step함수 수정이 필요할 수 있음.
 
 
 class treeNode():	#트리 노드 정의. 노드에 state 정해주면, state.isTerminal()값에 따라 노드가 터미널노드인지 결정됨
@@ -244,7 +222,11 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 
 	def expand(self, node):
 		print('$ expand')
+		################################### 임시로 pass 코드
+		#actions = [0,1,1,1,1,1,1] 
+		################################### 임시로 pass코드
 		actions =Env.getPossibleActions()
+		#actions = node.getPossibleActions() #원래 코드, node에 따라야 하니까 이게 맞음
 		for action in actions:
 			if action not in node.children:
 				newNode = treeNode(node.takeAction(action), node)
@@ -272,8 +254,7 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 				bestNodes = [child]
 			elif nodeValue == bestValue:
 				bestNodes.append(child)
-		print('====getBestChild is:',random.choice(bestNodes))
-		print('====getBestChild is:',random.choice(bestNodes).totalReward)
+		print('====getBestChilde is:',random.choice(bestNodes))
 		return random.choice(bestNodes)
 
 	def getAction(self, root, bestChild):
@@ -283,11 +264,11 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 				return action
 
 initialState = Env.state
-MCTS=mcts(None,2)
+MCTS=mcts(None,1)
 action = MCTS.search(initialState)
-#print('=============변수 체크용=============')
-#print('BSnum개수',Env.BSnum)
-#print('Env.state is:',Env.state)
+print('=============변수 체크용=============')
+print('BSnum개수',Env.BSnum)
+print('Env.state is:',Env.state)
 #print('Env.isTerminal is:',Env.isTerminal())
-#print('possibleActions are:',Env.possibleActions)
-print('=================learnt state is:=================:',Env.state)
+print('possibleActions are:',Env.possibleActions)
+print('learnt action is:',action)

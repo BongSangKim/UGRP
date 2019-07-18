@@ -9,7 +9,7 @@ xDelta=xMax-xMin;yDelta=yMax-yMin; #rectangle dimensions
 areaTotal=xDelta*yDelta;
 
 #Point process parameters
-lambda0=4*10**-6 #intensity (ie mean density) of the Poisson process
+lambda0=10*10**-6 #intensity (ie mean density) of the Poisson process
 
 #Simulate a Poisson point process
 numbPoints = np.random.poisson(lambda0*areaTotal);#Poisson number of points
