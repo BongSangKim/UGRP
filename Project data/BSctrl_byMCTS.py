@@ -27,6 +27,8 @@ class UDNEnv(gym.Env):
 		#self.possibleActions = np.ones((1,self.BSnum)) ############ 이거를 1 by BSnum인 list로 만들어서 callable하게.
 		self.possibleActions = [1]*self.BSnum #numpy.ndarray는 callable하지 않기 때문에 getPossibleActions()함수 사용불가해짐. 따라서 임시로 list형으로 만드는 코드
 		#print('possibleActions:',self.possibleActions)
+		self.dtime = 0
+
 	def step(self, action):
 		print('$ step')
 		state = action #takeAction 함수에서 newstate=action함
@@ -53,6 +55,7 @@ class UDNEnv(gym.Env):
 		#print('set함수에서 rewardtype:',type(self.reward))
 		self.UE_Xposition = np.random.uniform(0,self.Area,(1,self.usernum)) #유저 위치 랜덤 배치
 		self.UE_Yposition = np.random.uniform(0,self.Area,(1,self.usernum))
+		self.dtime += 1
 		return self.SNR,self.reward, self.state
 		
 		
@@ -81,7 +84,16 @@ class UDNEnv(gym.Env):
 	################mcts.py에서 사용할 함수부분 ############################
 	def isTerminal(self): #일단 시간조건->SNR threshold로
 		print('$ isTerminal() 실행:',end=' ')
-		'''
+		print('isTerminal is:',end=' ')
+		self.timeLimit = 10
+		#self.startTime = 0
+		if self.dtime > self.timeLimit: #state is terminal 
+			print('TRUE')
+			return True
+		else: #state is nonterminal
+			print('FALSE')
+			return False
+		'''print('$ isTerminal() 실행:',end=' ')
 		self.threshold = 0.000001
 		#return False #terminal node나 SNR 터미널 조건 없다치고 ㄱㄱ!
 		newSNR, newReward, newState = self.step(action)
@@ -91,35 +103,23 @@ class UDNEnv(gym.Env):
 			return True
 		else:
 			return False
-			#이 코드 사용
+			#SNR 조건 넣고 싶을때 
 		'''
-		"""
-		print('isTerminal is:')
-		self.timeLimit = 10
-		self.startTime = time.time()
-		if time.time() > self.startTime+self.timeLimit/1000: #state is terminal 
-			print('TRUE')
-			return True
-		else: #state is nonterminal
-			print('FALSE')
-			return False
-			#이 코드 사용안함
-		"""
-		self.timeLimit = 100
-		if time.time() > self.timeLimit: #state is terminal 
-			print('True')
-			return True
-		else: #state is nonterminal
-			print('False')
-			return False
 
 	def getPossibleActions(self):
 		print('$ getPosssibleActions')
 		#state와 차원이 같고 0 or 1값을 가지는 텐서. action->state
-		for i in range(0,self.BSnum):
+		self.possibleActions = [0,1,2,3]
+		return self.possibleActions
+		'''
+		#가능한 Actions 모두 출력하게 하기.
+		#예시) [[0,0,0,0],....[1,1,1,1]] (BSnum=4일때)
+		
+		for i in range(self.BSnum):
+		#	for i in range(self.BSnum):
 			self.possibleActions[i]=random.randrange(0,2) #0 or 1 값
 		return self.possibleActions
-
+		'''
 	def takeAction(self, action):  
 		print('$ takeAction')
 		newSNR, newReward, newState = self.step(action)
@@ -245,8 +245,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 	def getBestChild(self, node, explorationValue):
 		print('$ getBestChild')
 		bestValue = float("-inf")
-		bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
-		#bestNodes = []
+		#bestNodes = [1,2,3] #오류 pass, bestNodes가 update가 안되고 있음
+		bestNodes = []
 		for child in node.children.values():
 			nodeValue = child.totalReward / child.numVisits + explorationValue * math.sqrt(2 * math.log(node.numVisits) / child.numVisits)
 			if nodeValue > bestValue:
@@ -254,6 +254,7 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 				bestNodes = [child]
 			elif nodeValue == bestValue:
 				bestNodes.append(child)
+		print('====getBestChilde is:',random.choice(bestNodes))
 		return random.choice(bestNodes)
 
 	def getAction(self, root, bestChild):
@@ -266,6 +267,7 @@ initialState = Env.state
 MCTS=mcts(None,1)
 action = MCTS.search(initialState)
 print('=============변수 체크용=============')
+print('BSnum개수',Env.BSnum)
 print('Env.state is:',Env.state)
 #print('Env.isTerminal is:',Env.isTerminal())
 print('possibleActions are:',Env.possibleActions)
