@@ -96,7 +96,7 @@ class UDNEnv(gym.Env):
 		#self.startTime = 0
 		if self.depth > self.depthLimit: #state is terminal 
 			#for debug#print('TRUE')
-			self.reset()
+			#self.reset()
 			return True
 		else: #state is nonterminal
 			#for debug#print('FALSE')
