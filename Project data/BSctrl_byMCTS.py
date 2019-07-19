@@ -1,5 +1,6 @@
 import time, math, random, gym
 import numpy as np
+from matplotlib import pyplot as plt
 #import tensorflow as tf 
 #7월 16일 텐서포기, np.array로 교체(tensor는 indexing 안됨) ->gpu써야하니까 np는 다시 tensorflow-gpu로 써야할듯
 #__dict__로 변수 내부 확인가능, 디버그할때 참고
@@ -22,7 +23,8 @@ class UDNEnv(gym.Env):
 		self.BSdistance = np.zeros((self.BSnum,self.usernum)) 
 		self.user_association = np.zeros(self.usernum) 
 		self.SNR = None
-		self.depthLimit = int(input('tree의 depthLimit를 입력하세요'))
+		#self.depthLimit = int(input('tree의 depthLimit를 입력하세요'))
+		self.depthLimit = 100
 		#self.possibleActions = np.ones((1,self.BSnum)) ############ 이거를 1 by BSnum인 list로 만들어서 callable하게.
 		self.possibleActions = [1]*self.BSnum #numpy.ndarray는 callable하지 않기 때문에 getPossibleActions()함수 사용불가해짐. 따라서 임시로 list형으로 만드는 코드
 		#print('possibleActions:',self.possibleActions)
@@ -181,6 +183,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 		#rolloutPolicy는 따로 입력해주지 않으면 randompolicy인데, 나중에 UCB1값을 비교하는 식으로 하는 것이 좋을듯.
 		#처음에는 라이브러리 기본대로 randompolicy함수 만들어서 하고, 이후 UCB1 함수 따로 만들어서 rolloutPolicy 변수값을 UCB1으로 넣어보기
 		#for debug#print('$ MCTS(class)')
+		self.rewardsave=[]
+		self.rewardmax = 0
 		if timeLimit != None:
 			if iterationLimit != None:
 				raise ValueError("Cannot have both a time limit and an iteration limit")
@@ -244,11 +248,19 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 		raise Exception("Should never reach here")
 
 	def backpropagate(self, node, reward):
+		if self.rewardmax < node.totalReward:
+			self.rewardmax = node.totalReward
+			self.rewardsave.append(node.totalReward)
+		else:
+			self.rewardsave.append(self.rewardmax)
+		print('========Total Reward========:\n',node.totalReward)
+		
 		while node is not None:
 			node.numVisits += 1
 			node.totalReward += reward  
 			node = node.parent
 			#for debug#print('$ backpropagate')
+	
 	def getBestChild(self, node, explorationValue):
 		#for debug#print('$ getBestChild')
 		bestValue = float("-inf")
@@ -262,7 +274,7 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 			elif nodeValue == bestValue:
 				bestNodes.append(child)
 		#print('====getBestChild is:',random.choice(bestNodes))
-		print('========Total Reward========:\n',random.choice(bestNodes).totalReward)
+		#print(self.rewardsave)
 		return random.choice(bestNodes)
 
 	def getAction(self, root, bestChild):
@@ -270,10 +282,22 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 		for action, node in root.children.items():
 			if node is bestChild:
 				return action
-
+	def show_graph(self):
+		#print(self.rewardsave)
+		self.idx=self.rewardsave[:]
+		for i in range(len(self.rewardsave)):
+			self.idx[i]=i
+		line=plt.plot(self.idx,self.rewardsave)
+		plt.xlabel('Iteration')
+		plt.ylabel('Total Reward')
+		plt.title('Result')
+		plt.setp(line, linewidth=1)
+		plt.savefig('plot_MCTS.png',dpi=300)
+		plt.show()
 initialState = Env.state
-ITERATIONLIMIT=int(input('iteration 횟수를 입력하세요'))
-MCTS=mcts(None,ITERATIONLIMIT)
+#ITERATIONLIMIT=int(input('iteration 횟수를 입력하세요'))
+#MCTS=mcts(None,ITERATIONLIMIT)
+MCTS=mcts(None,100000)
 action = MCTS.search(initialState)
 #print('=============변수 체크용=============')
 #print('BSnum개수',Env.BSnum)
@@ -281,3 +305,4 @@ action = MCTS.search(initialState)
 #print('Env.isTerminal is:',Env.isTerminal())
 #print('possibleActions are:',Env.possibleActions)
 print('========learnt state is:========:\n',Env.state)
+MCTS.show_graph()
