@@ -22,7 +22,7 @@ class UDNEnv(gym.Env):
 		self.BSdistance = np.zeros((self.BSnum,self.usernum)) 
 		self.user_association = np.zeros(self.usernum) 
 		self.SNR = None
-		self.depthLimit = 100
+		self.depthLimit = int(input('tree의 depthLimit를 입력하세요'))
 		#self.possibleActions = np.ones((1,self.BSnum)) ############ 이거를 1 by BSnum인 list로 만들어서 callable하게.
 		self.possibleActions = [1]*self.BSnum #numpy.ndarray는 callable하지 않기 때문에 getPossibleActions()함수 사용불가해짐. 따라서 임시로 list형으로 만드는 코드
 		#print('possibleActions:',self.possibleActions)
@@ -272,7 +272,8 @@ class mcts():  #explorationConstant는 값을 바꾸어 학습시킬 수 있다.
 				return action
 
 initialState = Env.state
-MCTS=mcts(None,200000)
+ITERATIONLIMIT=int(input('iteration 횟수를 입력하세요'))
+MCTS=mcts(None,ITERATIONLIMIT)
 action = MCTS.search(initialState)
 #print('=============변수 체크용=============')
 #print('BSnum개수',Env.BSnum)
