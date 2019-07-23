@@ -19,7 +19,7 @@ if use_cuda:
 class ReplayBuffer():            #3:35. et=(st,at,rt,st+1)인 튜플 e를 buffer에 저장
     def __init__(self):
         self.buffer = collections.deque()   #maxlen이상이면 FIFO으로 빠져나감
-        self.batch_size = 32      #replay buffer에서 sampling할때 필요
+        self.batch_size = 1024      #replay buffer에서 sampling할때 필요
         self.size_limit = 50000   #buffer의 최대 크기, DQN 논문에서는 백만
      
     def put(self, data):          #replay buffer에 데이터를 넣는 것, FIFO, 들어와서 다 차면 왼쪽으로 나감
@@ -39,9 +39,9 @@ class Qnet(nn.Module):    #Q network, torch.nn 모듈을 상속받음
 
     def __init__(self):
         super(Qnet, self).__init__()
-        self.fc1 = nn.Linear(38, 1000) #nn.Linear(len(state:BSnum+UEnum*2),64)  
-        self.fc2 = nn.Linear(1000, 1000) 
-        self.fc3 = nn.Linear(1000, 64)  #output은 action 경우의 수, 우리는 2*(BSnum)개 output되야함...
+        self.fc1 = nn.Linear(38, 100) #nn.Linear(len(state:BSnum+UEnum*2),64)  
+        self.fc2 = nn.Linear(100, 100) 
+        self.fc3 = nn.Linear(100, 64)  #output은 action 경우의 수, 우리는 2*(BSnum)개 output되야함...
 
     def forward(self, x):       #forward함수로 action을 할 수 있다
         x = F.relu(self.fc1(x))  #input 4개에서 64개로 fully connected, Relu
