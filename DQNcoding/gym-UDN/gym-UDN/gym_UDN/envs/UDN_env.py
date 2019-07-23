@@ -24,7 +24,8 @@ class UDNEnv(gym.Env):
         self.action_space = spaces.Discrete(2**self.BSnum)
         self.movedistance = None
         self.state = np.r_[self.BSstate,self.user_Xposition,self.user_Yposition]
-        self.actiontime = 0
+        self.totalreward = 0
+        self.bandwidth = 10**7
         
     
     def step(self, action):
@@ -32,15 +33,19 @@ class UDNEnv(gym.Env):
         #return state action pair reward 
         self.take_action(action)
         
-        SIR_weightvalue = 1
+        Datarate_weightvalue = 10**6
         Energyconsumption_weightvalue = 1
         
         signal = self.BS_User_S()
         Interference = self.Interference_User_I()
-        SIR = np.sum(signal/Interference)
+        SIR = signal/Interference
+        Datarate = self.bandwidth * np.log2(1+SIR)
         Energyconsumption = np.sum(self.state[:self.BSnum])
-        reward = SIR_weightvalue * SIR / Energyconsumption_weightvalue * Energyconsumption
-        if self.actiontime == 30:
+        if Energyconsumption == 0:
+            reward = -10
+        else:
+            reward = Datarate_weightvalue * np.mean(Datarate) / (Energyconsumption_weightvalue * Energyconsumption)
+        if reward < 0.1:
             is_done = True
         else:
             is_done = False
@@ -52,14 +57,14 @@ class UDNEnv(gym.Env):
         self.user_Xposition = np.random.uniform(0,self.Area,self.usernum)
         self.user_Yposition = np.random.uniform(0,self.Area,self.usernum)
         self.state = np.r_[self.BSstate,self.user_Xposition,self.user_Yposition]
-        self.actiontime = 0
+        
         return self.state
     
     def take_action(self, action):
         #do action for change state
         self.BSstate = self.Binarychange(action)
         self.movedistance = self.usermovedistance()
-        self.actiontime += 1
+        
         for i in range(self.BSnum):
             self.state[i] = self.BSstate[i]
         
@@ -139,5 +144,3 @@ class UDNEnv(gym.Env):
             BS_user_assosiation[i][user_BS_shortest[i]] = True
 
         return BS_user_assosiation
-
-    
