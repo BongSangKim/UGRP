@@ -132,6 +132,7 @@ class UDNEnv(gym.Env):
             user_interferencepower = np.sum(Interference_User_distance,axis = 1)
         else:
             user_interferencepower = np.sum(Interference_User_distance[:,InterferenceBSstate_bool],axis =1)
+        print(user_interferencepower)
         return user_interferencepower
     
 

@@ -7,7 +7,7 @@ import gym_UDN
 import collections   #replay buffer에서 쓰일 deque를 import하기 위함 double ended que?
 import random
 
-import torch    #pytorch
+import torch    #pytorch 
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -16,11 +16,13 @@ use_cuda =torch.cuda.is_available()
 if use_cuda:
     pass
 
+BSnum=6
+UEnum=16
 class ReplayBuffer():            #3:35. et=(st,at,rt,st+1)인 튜플 e를 buffer에 저장
     def __init__(self):
         self.buffer = collections.deque()   #maxlen이상이면 FIFO으로 빠져나감
-        self.batch_size = 1024      #replay buffer에서 sampling할때 필요
-        self.size_limit = 50000   #buffer의 최대 크기, DQN 논문에서는 백만
+        self.batch_size = 10000      #replay buffer에서 sampling할때 필요
+        self.size_limit = 1000000   #buffer의 최대 크기, DQN 논문에서는 백만
      
     def put(self, data):          #replay buffer에 데이터를 넣는 것, FIFO, 들어와서 다 차면 왼쪽으로 나감
         self.buffer.append(data)
@@ -39,9 +41,9 @@ class Qnet(nn.Module):    #Q network, torch.nn 모듈을 상속받음
 
     def __init__(self):
         super(Qnet, self).__init__()
-        self.fc1 = nn.Linear(38, 100) #nn.Linear(len(state:BSnum+UEnum*2),64)  
+        self.fc1 = nn.Linear(BSnum+UEnum*2, 100) #nn.Linear(len(state:BSnum+UEnum*2),100)  
         self.fc2 = nn.Linear(100, 100) 
-        self.fc3 = nn.Linear(100, 64)  #output은 action 경우의 수, 우리는 2*(BSnum)개 output되야함...
+        self.fc3 = nn.Linear(100, 2**BSnum)  #output은 action 경우의 수, 우리는 2**(BSnum)개 output되야함...
 
     def forward(self, x):       #forward함수로 action을 할 수 있다
         x = F.relu(self.fc1(x))  #input 4개에서 64개로 fully connected, Relu
@@ -54,7 +56,7 @@ class Qnet(nn.Module):    #Q network, torch.nn 모듈을 상속받음
         out = self.forward(obs)
         coin = random.random() #0~1사이의 랜덤값
         if coin < epsilon:   #if 조건 실행될 확률 = epilson값
-            return random.randint(0,63) 
+            return random.randint(0,2**BSnum-1) 
         else : 
             return out.argmax().item()
         
@@ -127,13 +129,15 @@ def main():
                 break
         avg_t += t
 
-        if memory.size()>2000:       #memory가 충분히 쌓이면 train함수 호출(충분히 쌓이고 시작해야함) 
+        if memory.size()>50000:       #memory가 충분히 쌓이면 train함수 호출(충분히 쌓이고 시작해야함) 
             train(q, q_target, memory, gamma, optimizer, batch_size)
 
-        if n_epi%20==0 and n_epi!=0:  #20에피소드마다 최근 에피소드 평균 timestep, target network를 update
+        if n_epi%5==0 and n_epi!=0:  #20에피소드마다 최근 에피소드 평균 timestep, target network를 update
+            abin=bin(a)[2:].zfill(6)
             q_target.load_state_dict(q.state_dict())
-            print("# of episode :{}, Avg timestep : {:.1f}, buffer size : {}, epsilon : {:.1f}%".format(n_epi, avg_t/20.0, memory.size(), epsilon*100))
-            print(a,'action,',r,'reward')
+            print("# of episode :{}, Avg timestep : {:.1f}, buffer size : {}, epsilon : {:.1f}%".format(n_epi, avg_t/20.0,
+                  memory.size(), epsilon*100))
+            print("action :{}, reward :{}".format(abin, r))
             #print("# of episode :{}, Avg timestep : {:.1f}, buffer size : {}, epsilon : {:.1f}%".format(n_epi, avg_t/20.0, memory.size(), epsilon*100))
             avg_t = 0
     env.close()
