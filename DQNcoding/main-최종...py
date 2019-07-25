@@ -1,5 +1,5 @@
 #https://github.com/seungeunrho/minimalRL/blob/52aaa800e7bad30920a21a62f04a17d25663245c/dqn.py
-del gym.envs.registry.env_specs['UDN-v0']
+
 import gym
 import gym_UDN
 import collections   #replay buffer에서 쓰일 deque를 import하기 위함 double ended que?
@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+device = torch.device("cuda:0")
 
 class ReplayBuffer():            #3:35. et=(st,at,rt,st+1)인 튜플 e를 buffer에 저장
     def __init__(self):
@@ -36,13 +37,13 @@ class Qnet(nn.Module):    #Q network, torch.nn 모듈을 상속받음
 
     def __init__(self):
         super(Qnet, self).__init__()
-        self.fc1 = nn.Linear(38, 100) #nn.Linear(len(state:BSnum+UEnum*2),64)  
-        self.fc2 = nn.Linear(100, 100) 
-        self.fc3 = nn.Linear(100, 64)  #output은 action 경우의 수, 우리는 2*(BSnum)개 output되야함...
+        self.fc1 = nn.Linear(32, 100).cuda() #nn.Linear(len(state:BSnum+UEnum*2),64)  
+        self.fc2 = nn.Linear(100, 100).cuda() 
+        self.fc3 = nn.Linear(100, 64).cuda()  #output은 action 경우의 수, 우리는 2*(BSnum)개 output되야함...
 
     def forward(self, x):       #forward함수로 action을 할 수 있다
-        x = F.relu(self.fc1(x))  #input 4개에서 64개로 fully connected, Relu
-        x = F.relu(self.fc2(x))  #64개에서 64개로 fully connected, Relu
+        x = F.relu(self.fc1(x)).cuda()  #input 4개에서 64개로 fully connected, Relu
+        x = F.relu(self.fc2(x)).cuda()  #64개에서 64개로 fully connected, Relu
         x = self.fc3(x)          #64개에서 2개로 output, 여기서는 Relu안 넣음. q value가 음수일 수도 있으므로
         #원래 value function 마지막 단에서는 relu를 사용하지 않습니다
         return x
@@ -72,9 +73,9 @@ def train(q, q_target, memory, gamma, optimizer, batch_size):   #한 episode끝�
             s_prime_lst.append(s_prime)
             done_mask_lst.append([done_mask])
         #s:state, a:action, r:reward, s_prime:next state
-        s,a,r,s_prime,done_mask = torch.tensor(s_lst, device=device, dtype=torch.float), torch.tensor(a_lst, device=device), \
-                                  torch.tensor(r_lst, device=device), torch.tensor(s_prime_lst, device=device, dtype=torch.float), \
-                                  torch.tensor(done_mask_lst, device=device)
+        s,a,r,s_prime,done_mask = torch.tensor(s_lst, device=device, dtype=torch.float).cuda(), torch.tensor(a_lst, device=device).cuda(), \
+                                  torch.tensor(r_lst, device=device).cuda(), torch.tensor(s_prime_lst, device=device, dtype=torch.float).cuda(), \
+                                  torch.tensor(done_mask_lst, device=device).cuda()
         q_out = q(s) #여기 예시에서 s는 [32(batch_size),4(원래 s dimension)] 사이즈
         #s가 input으로 들어가서, q의 output은 Shape가 [32,2]
         q_a = q_out.gather(1,a)  #a는 [32,1], q_out.gather는 실제로 취한 action의 q값만 골라낸다. 여기서 a는 일종의 index
@@ -103,7 +104,8 @@ def main():
     memory = ReplayBuffer()
 
     avg_t = 0
-    gamma = 0
+    avg_t_100 = 0
+    gamma = 0.99
     batch_size = 1024
     optimizer = optim.Adam(q.parameters(), lr=0.0005)  #q.parameter를 update, 이때 q-target은 update안함!
 
@@ -114,14 +116,14 @@ def main():
     BS_on_count = np.zeros(env.BSnum,dtype = float)
     BS_num_count = range(env.BSnum)
 
-    for n_epi in range(100000):  #에피소드를 100000으로 일단,
-        epsilon = max(0.0, 0.99-0.01*(n_epi)/700) #(0.01*(n_epi)/60)엡실론을 Linear annealing from 8% to 1%,
+    for n_epi in range(20000):  #에피소드를 100000으로 일단,
+        epsilon = max(0.0, 0.99-0.01*(n_epi)/120) #(0.01*(n_epi)/60)엡실론을 Linear annealing from 8% to 1%,
         #epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
                                                      #따라서 exploration을 처음에 많이 하다가 점점 줄인다
         s = env.reset()
             #s가 state 받고
         for t in range(1000):
-            a = q.sample_action(torch.from_numpy(s).float(), epsilon)     #sample_action:e-greedy,
+            a = q.sample_action(torch.from_numpy(s).float().cuda(), epsilon)     #sample_action:e-greedy,
             s_prime, r, done, info = env.step(a)       #a를 environment에 넣어서 다음 state(s_prime), 다음 reward, done 얻음
             done_mask = 0.0 if done else 1.0           #game이 끝나면 0이고 안끝났으면 1, TD-target에서 쓰기 위해(15:30)
             memory.put((s,a,r,s_prime, done_mask))  #memory를 계속 저장
@@ -131,6 +133,7 @@ def main():
             if done:
                 break
         avg_t += t
+        avg_t_100 += t
 
         if memory.size()>20000:       #memory가 충분히 쌓이면 train함수 호출(충분히 쌓이고 시작해야함) 
             train(q, q_target, memory, gamma, optimizer, batch_size)
@@ -143,7 +146,8 @@ def main():
             avg_time_20.append(avg_t/20)
             if n_epi%100 == 0:
                 epi_num_100.append(n_epi)
-                avg_time_100.append(avg_t/100)
+                avg_time_100.append(avg_t_100/100)
+                avg_t_100 = 0
             avg_t = 0
 
     env.close()
